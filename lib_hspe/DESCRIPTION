@@ -1,0 +1,19 @@
+Package: hspe
+Title: Hybrid-scale cell-type deconvolution
+Version: 0.1
+Description: For more information see Hunt et al. (2020) in the Annals of Applied Statistics.
+Date: 2021-1-27
+Authors@R: c(person("Gregory", "Hunt", email = "ghunt@wm.edu", role = c("aut", "cre")),
+	person("Johann", "Gagnon-Bartsch", email = "johanngb@umich.edu", role = c("aut")))	
+LazyData: true
+RoxygenNote: 7.1.1
+Imports:
+    DEoptimR,
+    nloptr
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat	
+VignetteBuilder: knitr
+License: GPL-3
+Depends: R(>= 3.5.0)

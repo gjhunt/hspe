@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Greg Hunt" />
+
+<meta name="date" content="2021-01-27" />
+
+<title>Basic Deconvolution using hspe</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(data-line-number);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Basic Deconvolution using hspe</h1>
+<h4 class="author">Greg Hunt</h4>
+<h4 class="date">2021-01-27</h4>
+
+
+
+<p>In this vignette we will deconvolve a simple dataset using “hspe.”</p>
+<div id="the-data" class="section level1">
+<h1>The Data</h1>
+<p>In this vignette we will work through a simple example of deconvolving cell type proportions from DNA microarray data. We work with a data set created from rats and introduced by <a href="https://www.nature.com/nmeth/journal/v7/n4/abs/nmeth.1439.html">Shen-Orr et al</a>. This is available on GEO with accession <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE19830">GSE19830</a>. The data set we will work with is a subset of the Shen-Orr data and is included in the <code>hspe</code> package under the name <code>shen_orr_ex</code>. More information about the data set is available as part of the <code>R</code> help, <code>?shen_orr_ex</code>. First, load up the data set.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(<span class="st">'hspe'</span>)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="kw">names</span>(shen_orr_ex)</a></code></pre></div>
+<pre><code>## [1] &quot;data&quot;       &quot;annotation&quot; &quot;name&quot;</code></pre>
+<p>In this data set, rat brain, liver and lung cells have been mixed together in various proportions. The resulting mixtures were analyzed with DNA microarrays. The mixing proportions are encoded in the mixture matrix</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw">head</span>(shen_orr_ex<span class="op">$</span>annotation<span class="op">$</span>mixture)</a></code></pre></div>
+<pre><code>##           Liver Brain Lung
+## GSM495209     1     0    0
+## GSM495210     1     0    0
+## GSM495211     1     0    0
+## GSM495212     0     1    0
+## GSM495213     0     1    0
+## GSM495214     0     1    0</code></pre>
+<p>Each row of this matrix is a sample and each column gives the mixing proportions of the cell types in each sample.</p>
+<p>The RMA-summarized gene expression data generated as part of the Shen-Orr experiment is accessible under <code>data$log</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">Y &lt;-<span class="st"> </span>shen_orr_ex<span class="op">$</span>data<span class="op">$</span>log</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">Y[<span class="dv">1</span><span class="op">:</span><span class="dv">4</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">4</span>]</a></code></pre></div>
+<pre><code>##           X1367566_at X1367568_a_at X1367570_at X1367584_at
+## GSM495209    3.396192      7.685769    5.722330    6.628653
+## GSM495210    2.882626      7.759002    6.005583    6.771917
+## GSM495211    3.072980      7.598871    5.741630    6.564820
+## GSM495212    3.168440      7.209959    6.396841    7.040779</code></pre>
+<p>Each row is a different individual and each column is a particular gene. The values of the matrix are <span class="math inline">\(\log_2\)</span> RMA-summarized gene expressions.</p>
+</div>
+<div id="arguments" class="section level1">
+<h1>Arguments</h1>
+<p>The arguments to hspe can be grouped as follows:</p>
+<ol style="list-style-type: decimal">
+<li>gene expression data input: Y, references, and pure_samples</li>
+<li>marker gene controls: n_markers, markers and marker_method</li>
+<li>data scaling control: inv_scale and fit_scale for making sure the data is on the right scale for hspe</li>
+</ol>
+<p>Other arguments to hspe may be found in the help documentation</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">?hspe</a></code></pre></div>
+</div>
+<div id="y-references-and-pure_samples" class="section level1">
+<h1>1. Y, references, and pure_samples</h1>
+<p>In order to deconvolve gene expression data from mixture samples hspe requires references of the cell-types to be deconvolved. The mixture gene expressions and reference gene expressions are given to hspe using the arguments Y, references, and pure_samples.</p>
+<p>Consider, again, our data from <a href="https://www.nature.com/nmeth/journal/v7/n4/abs/nmeth.1439.html">Shen-Orr et al</a> as an example. For speed, we’re going to subset to a very small number of genes:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1">data =<span class="st"> </span>shen_orr_ex<span class="op">$</span>data<span class="op">$</span>log[,<span class="kw">c</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>,<span class="dv">201</span><span class="op">:</span><span class="dv">210</span>,<span class="dv">401</span><span class="op">:</span><span class="dv">410</span>)]</a>
+<a class="sourceLine" id="cb8-2" data-line-number="2">mixture_proportions =<span class="st"> </span>shen_orr_ex<span class="op">$</span>annotation<span class="op">$</span>mixture</a></code></pre></div>
+<p>looking at the mixture proportions we can see that the first nine samples are pure reference samples of the three cell types and the remaining samples are mixture samples of the cell types</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1">mixture_proportions</a></code></pre></div>
+<pre><code>##           Liver Brain Lung
+## GSM495209  1.00  0.00 0.00
+## GSM495210  1.00  0.00 0.00
+## GSM495211  1.00  0.00 0.00
+## GSM495212  0.00  1.00 0.00
+## GSM495213  0.00  1.00 0.00
+## GSM495214  0.00  1.00 0.00
+## GSM495215  0.00  0.00 1.00
+## GSM495216  0.00  0.00 1.00
+## GSM495217  0.00  0.00 1.00
+## GSM495218  0.05  0.25 0.70
+## GSM495219  0.05  0.25 0.70
+## GSM495220  0.05  0.25 0.70
+## GSM495221  0.70  0.05 0.25
+## GSM495222  0.70  0.05 0.25
+## GSM495223  0.70  0.05 0.25
+## GSM495224  0.25  0.70 0.05
+## GSM495225  0.25  0.70 0.05
+## GSM495226  0.25  0.70 0.05
+## GSM495227  0.70  0.25 0.05
+## GSM495228  0.70  0.25 0.05
+## GSM495229  0.70  0.25 0.05
+## GSM495230  0.45  0.45 0.10
+## GSM495231  0.45  0.45 0.10
+## GSM495232  0.45  0.45 0.10
+## GSM495233  0.55  0.20 0.25
+## GSM495234  0.55  0.20 0.25
+## GSM495235  0.55  0.20 0.25
+## GSM495236  0.50  0.30 0.20
+## GSM495237  0.50  0.30 0.20
+## GSM495238  0.50  0.30 0.20
+## GSM495239  0.55  0.30 0.15
+## GSM495240  0.55  0.30 0.15
+## GSM495241  0.55  0.30 0.15
+## GSM495242  0.50  0.40 0.10
+## GSM495243  0.50  0.40 0.10
+## GSM495244  0.50  0.40 0.10
+## GSM495245  0.60  0.35 0.05
+## GSM495246  0.60  0.35 0.05
+## GSM495247  0.60  0.35 0.05
+## GSM495248  0.65  0.34 0.01
+## GSM495249  0.65  0.34 0.01
+## GSM495250  0.65  0.34 0.01</code></pre>
+<p>We want to use these reference samples to deconvolve the remaining mixture samples. This can be done in a couple of ways:</p>
+<ol style="list-style-type: decimal">
+<li>We can provide Y and pure_samples to hspe. Here Y will be the combined matrix of reference and mixture samples and pure_samples will tell hspe which samples (rows of Y) are reference samples and (by elimination) which samples are mixture samples we wish to deconvolve.</li>
+</ol>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1">pure_samples =<span class="st"> </span><span class="kw">list</span>(<span class="dt">Liver=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>),<span class="dt">Brain=</span><span class="kw">c</span>(<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>),<span class="dt">Lung=</span><span class="kw">c</span>(<span class="dv">7</span>,<span class="dv">8</span>,<span class="dv">9</span>))</a>
+<a class="sourceLine" id="cb11-2" data-line-number="2">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>data, <span class="dt">pure_samples =</span> pure_samples,<span class="dt">optim_opts=</span><span class="kw">list</span>(<span class="dt">pkg=</span><span class="st">&quot;nloptr&quot;</span>))</a></code></pre></div>
+<p>We can get the estiamtes by accessing the “estimates” property of the result, and plot them:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1">true_proportions =<span class="st"> </span>mixture_proportions[<span class="op">-</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">9</span>),]</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2"><span class="kw">matplot</span>(true_proportions,out<span class="op">$</span>estimates, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">xlab=</span><span class="st">&quot;Truth&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;Estimates&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<ol start="2" style="list-style-type: decimal">
+<li>We can instead split the data into Y as just the matrix of mixture samples and references as the matrix of reference expressions.</li>
+</ol>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" data-line-number="1">mixture_samples =<span class="st"> </span>data[<span class="op">-</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">9</span>),]</a>
+<a class="sourceLine" id="cb13-2" data-line-number="2">reference_samples =<span class="st"> </span>data[<span class="dv">1</span><span class="op">:</span><span class="dv">9</span>,]</a>
+<a class="sourceLine" id="cb13-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb13-4" data-line-number="4">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">reference=</span>reference_samples,<span class="dt">pure_samples =</span> pure_samples)</a>
+<a class="sourceLine" id="cb13-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb13-6" data-line-number="6"><span class="kw">matplot</span>(true_proportions,out<span class="op">$</span>estimates, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">xlab=</span><span class="st">&quot;Truth&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;Estimates&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>Now the variable pure_samples tells hspe to which cell type each of the the rows of the references matrix corresponds to.</p>
+<p>In this example we still needed the variable pure_samples because our reference expression matrix contained multiple reference profiles for each cell type. Often one only has a reference expression matrix with one (typically average) expression profile per cell type. In this case we don’t need the pure_samples argument:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1">ref_reduced =<span class="st"> </span><span class="kw">t</span>(<span class="kw">sapply</span>(pure_samples,<span class="cf">function</span>(x)<span class="kw">colMeans</span>(reference_samples[x,,<span class="dt">drop=</span><span class="ot">FALSE</span>])))</a>
+<a class="sourceLine" id="cb14-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb14-3" data-line-number="3">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">reference=</span>ref_reduced)</a>
+<a class="sourceLine" id="cb14-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb14-5" data-line-number="5"><span class="kw">matplot</span>(true_proportions,out<span class="op">$</span>estimates, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="dt">xlab=</span><span class="st">&quot;Truth&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;Estimates&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+</div>
+<div id="n_markers-markers-and-marker_method" class="section level1">
+<h1>2. n_markers, markers and marker_method</h1>
+<p>Central to hspe is finding marker genes for each cell type. Markers may either be given explicitly to hspe by the user or they may be left up to hspe itself to determine the marker genes automatically.</p>
+<div id="letting-hspe-determine-the-marker-genes." class="section level2">
+<h2>Letting hspe determine the marker genes.</h2>
+<p>If we do not specify the argument markers then hspe automatically determines marker genes:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced)</a></code></pre></div>
+<p>we can change the way that hspe finds marker genes using the marker_method argument:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">marker_method =</span> <span class="st">&quot;diff&quot;</span>)</a></code></pre></div>
+<p>the default is to use “ratio”. More options may be found in the R help documentation.</p>
+<p>The argument n_markers specifies how many marker genes to use. If unspecified then hspe uses the top 10% of genes (as ranked according to marker_method) as markers.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" data-line-number="1">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## Liver Brain  Lung 
+##     1     1     1</code></pre>
+<p>The number of marker genes can be explicitly specified by setting n_markers:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">marker_method =</span> <span class="st">&quot;diff&quot;</span>,<span class="dt">n_markers=</span><span class="dv">3</span>)</a>
+<a class="sourceLine" id="cb19-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb19-3" data-line-number="3">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## [1] 3 3 3</code></pre>
+<p>if just a single integer is specified then all genes us that number of marker genes. Alternatively we can specify a vector of integers to specify a number of marker genes individually for each cell type:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb21-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">marker_method =</span> <span class="st">&quot;diff&quot;</span>,<span class="dt">n_markers=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>))</a>
+<a class="sourceLine" id="cb21-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb21-3" data-line-number="3">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## [1] 1 2 3</code></pre>
+<p>we can also, in a similar fashion, pass a percentage (or vector of percentages) to n_markers which will then use that percentage of the ranked marker genes for each cell type:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb23-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">marker_method =</span> <span class="st">&quot;diff&quot;</span>,<span class="dt">n_markers=</span>.<span class="dv">075</span>)</a>
+<a class="sourceLine" id="cb23-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb23-3" data-line-number="3">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## [1] 1 1 1</code></pre>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb25-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">marker_method =</span> <span class="st">&quot;diff&quot;</span>,<span class="dt">n_markers=</span><span class="kw">c</span>(.<span class="dv">1</span>,.<span class="dv">15</span>,.<span class="dv">05</span>))</a>
+<a class="sourceLine" id="cb25-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb25-3" data-line-number="3">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## [1] 1 1 1</code></pre>
+</div>
+<div id="specifying-the-marker-genes-explicitly." class="section level2">
+<h2>Specifying the marker genes explicitly.</h2>
+<p>Instead of letting hspe determine the marker genes we can instead explicitly pass a list of markers to hspe specifying the marker genes,</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb27-1" data-line-number="1">marker_genes =<span class="st"> </span><span class="kw">list</span>(<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>),</a>
+<a class="sourceLine" id="cb27-2" data-line-number="2">                    <span class="kw">c</span>(<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>),</a>
+<a class="sourceLine" id="cb27-3" data-line-number="3">                    <span class="kw">c</span>(<span class="dv">7</span>,<span class="dv">8</span>,<span class="dv">9</span>))</a>
+<a class="sourceLine" id="cb27-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb27-5" data-line-number="5">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced,<span class="dt">markers=</span>marker_genes)</a>
+<a class="sourceLine" id="cb27-6" data-line-number="6">out<span class="op">$</span>n_markers</a></code></pre></div>
+<pre><code>## [1] 3 3 3</code></pre>
+<p>the format of the list is precisely the same format as returned in the markers element of the output of hspe, that is, a list of vectors of column indicies of <span class="math inline">\(Y\)</span> that are markers of each of the cell types. The elements of the list correspond one to each cell type in the same order specified either in elements of pure_samples or by the rows of references. The argument of n_markers can be used in the same way to subset the markers if desired.</p>
+</div>
+<div id="how-hspe-finds-markers" class="section level2">
+<h2>How hspe finds markers</h2>
+<p>hspe finds the marker genes by using the find_markers function.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb29-1" data-line-number="1">mrkrs =<span class="st"> </span><span class="kw">find_markers</span>(<span class="dt">Y=</span>mixture_samples, <span class="dt">references =</span> ref_reduced)</a>
+<a class="sourceLine" id="cb29-2" data-line-number="2"><span class="kw">names</span>(mrkrs)</a></code></pre></div>
+<pre><code>## [1] &quot;L&quot;  &quot;V&quot;  &quot;M&quot;  &quot;sM&quot;</code></pre>
+<p>which returns a list with four elements L which contains all genes putatively assigned to a cell type they mark, V which contains the ranking values by which the elements of L are ordered, M and sM which are the matrix and sorted matrix used to create V and L.</p>
+<p>We can pass either the entire list or just the L list to hspe as markers and re-create how hspe automatically chooses markers:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb31-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y =</span> mixture_samples,<span class="dt">references =</span> ref_reduced,<span class="dt">markers=</span>mrkrs,<span class="dt">n_markers=</span>.<span class="dv">1</span>)</a></code></pre></div>
+</div>
+</div>
+<div id="scaling-options-supplying-the-correct-scale-data-to-hspe" class="section level1">
+<h1>scaling options: supplying the correct scale data to hspe</h1>
+<p>Notice that we have been working with log2-scale gene expressions. If not set by the user, hspe assumes log2 transformed expressions. However we may choose to work with other transformations of gene expressions. In this case, one needs to tell hspe how to transform this data back to the linear-scale. This is provided to the argument “inv_scale”.</p>
+<p>Let us artificially create linear-scale gene expression data by un-doing the log2 transformation applied:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb32-1" data-line-number="1">lin_scale_mix =<span class="st"> </span><span class="dv">2</span><span class="op">^</span>mixture_samples</a>
+<a class="sourceLine" id="cb32-2" data-line-number="2">lin_scale_ref =<span class="st"> </span><span class="dv">2</span><span class="op">^</span>ref_reduced</a></code></pre></div>
+<p>Since this data is already on the linear scale, the transformation to get this data to the linear scale is simply the identity transformation. Thus we can deconvolve this data using hspe passing the identity function to the inv_scale argument</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb33-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>lin_scale_mix,<span class="dt">references =</span> lin_scale_ref,<span class="dt">inv_scale =</span> base<span class="op">::</span>identity,</a>
+<a class="sourceLine" id="cb33-2" data-line-number="2">                  <span class="dt">seed=</span><span class="dv">1234</span>,<span class="dt">markers =</span> mrkrs<span class="op">$</span>L)</a>
+<a class="sourceLine" id="cb33-3" data-line-number="3"><span class="kw">head</span>(out<span class="op">$</span>estimates)</a></code></pre></div>
+<pre><code>##                Liver      Brain      Lung
+## GSM495218 0.04283465 0.28579442 0.6713709
+## GSM495219 0.04427363 0.29073490 0.6649915
+## GSM495220 0.04517093 0.28855882 0.6662702
+## GSM495221 0.63614966 0.06267571 0.3011746
+## GSM495222 0.62915128 0.06803424 0.3028145
+## GSM495223 0.63480660 0.06094074 0.3042527</code></pre>
+<p>Alternatively, for example, we could work with arc-hyperbolic-sine transformed data with hspe, telling hspe that the transformation of this data back to the linear scale is the hyperbolic-sine function:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb35-1" data-line-number="1">ahs_scale_mix =<span class="st"> </span><span class="kw">asinh</span>(lin_scale_mix)</a>
+<a class="sourceLine" id="cb35-2" data-line-number="2">ahs_scale_ref =<span class="st"> </span><span class="kw">asinh</span>(lin_scale_ref)</a>
+<a class="sourceLine" id="cb35-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb35-4" data-line-number="4">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>ahs_scale_mix,<span class="dt">references =</span> ahs_scale_ref,<span class="dt">inv_scale =</span> base<span class="op">::</span>sinh,</a>
+<a class="sourceLine" id="cb35-5" data-line-number="5">                  <span class="dt">seed=</span><span class="dv">1234</span>,<span class="dt">markers =</span> mrkrs<span class="op">$</span>L)</a>
+<a class="sourceLine" id="cb35-6" data-line-number="6"><span class="kw">head</span>(out<span class="op">$</span>estimates)</a></code></pre></div>
+<pre><code>##                Liver      Brain      Lung
+## GSM495218 0.04283465 0.28579425 0.6713711
+## GSM495219 0.04427364 0.29073485 0.6649915
+## GSM495220 0.04517093 0.28855876 0.6662703
+## GSM495221 0.63614968 0.06267570 0.3011746
+## GSM495222 0.62915133 0.06803421 0.3028145
+## GSM495223 0.63480648 0.06094080 0.3042527</code></pre>
+<p>One may also specify the transformation to apply to the data when fitting. By default, a log transformation is used, however others can be specified in the “fit_scale” argument. For example, one can use a square-root scale if there is a compelling reason to do so.</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb37-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>lin_scale_mix,<span class="dt">references =</span> lin_scale_ref,<span class="dt">inv_scale =</span> base<span class="op">::</span>identity,<span class="dt">fit_scale=</span>base<span class="op">::</span>sqrt,<span class="dt">seed=</span><span class="dv">1234</span>,<span class="dt">markers =</span> mrkrs<span class="op">$</span>L)</a>
+<a class="sourceLine" id="cb37-2" data-line-number="2"><span class="kw">head</span>(out<span class="op">$</span>estimates)</a></code></pre></div>
+<pre><code>##                Liver     Brain      Lung
+## GSM495218 0.08711186 0.3554797 0.5574084
+## GSM495219 0.08753850 0.3569481 0.5555134
+## GSM495220 0.09046012 0.3568672 0.5526727
+## GSM495221 0.56958307 0.1288546 0.3015623
+## GSM495222 0.55926966 0.1423682 0.2983621
+## GSM495223 0.55940733 0.1382680 0.3023246</code></pre>
+<p>One may also specify the loss function to optimize using the option “loss_fn”. By default this minimizes a variance loss however “L2” may alterantively be used:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb39-1" data-line-number="1">out =<span class="st"> </span><span class="kw">hspe</span>(<span class="dt">Y=</span>lin_scale_mix,<span class="dt">references =</span> lin_scale_ref,<span class="dt">inv_scale =</span> base<span class="op">::</span>identity,<span class="dt">fit_scale=</span>base<span class="op">::</span>log,<span class="dt">loss_fn=</span><span class="st">&quot;L2&quot;</span>,<span class="dt">seed=</span><span class="dv">1234</span>,<span class="dt">markers =</span> mrkrs<span class="op">$</span>L)</a>
+<a class="sourceLine" id="cb39-2" data-line-number="2"><span class="kw">head</span>(out<span class="op">$</span>estimates)</a></code></pre></div>
+<pre><code>##                Liver      Brain      Lung
+## GSM495218 0.04283462 0.28579425 0.6713711
+## GSM495219 0.04427362 0.29073502 0.6649914
+## GSM495220 0.04517088 0.28855918 0.6662699
+## GSM495221 0.63614971 0.06267572 0.3011746
+## GSM495222 0.62915136 0.06803421 0.3028144
+## GSM495223 0.63480659 0.06094077 0.3042526</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

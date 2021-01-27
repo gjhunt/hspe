@@ -1,0 +1,22 @@
+#!/usr/bin/env Rscript
+library('crayon')
+library('devtools')
+library('formatR')
+
+cat(blue("1/5>>>>>>>>>>>>> CLEANING CODE.\n"))
+setwd('./lib_hspe')
+tidy_dir(recursive=TRUE,arrow=TRUE)
+
+cat(blue("2/5>>>>>>>>>>>>> DOCUMENTING.\n"))
+devtools::document()
+setwd('..')
+
+cat(blue("3/5>>>>>>>>>>>>> BUILDING.\n"))
+devtools::build('./lib_hspe',vignettes=TRUE)
+
+cat(blue("4/5>>>>>>>>>>>>> INSTALLING.\n"))
+fle = dir()[grepl("gz",dir())]
+install.packages(paste('./',fle,sep=""))
+
+cat(blue("5/5>>>>>>>>>>>>> CHECKING.\n"))
+devtools::check('./lib_hspe',cran=TRUE)
